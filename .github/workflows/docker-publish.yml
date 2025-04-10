@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write  # ✅ позволяет GITHUB_TOKEN пушить коммиты
+
 env:
   DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
   IMAGE_PREFIX: ${{ secrets.DOCKER_HUB_USERNAME }}/demo-app
@@ -91,5 +94,6 @@ jobs:
           file_pattern: VERSION.md
           commit_user_name: github-actions[bot]
           commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
+          branch: main  # 🔧 явно указываем ветку
         env:
           GIT_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
