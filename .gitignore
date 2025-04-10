@@ -1,0 +1,79 @@
+# === Global ===
+.DS_Store
+Thumbs.db
+*.log
+*.env
+*.env.local
+.env.*
+!.env.example
+node_modules/
+dist/
+build/
+.cache/
+coverage/
+.vscode/
+.idea/
+*.swp
+
+# === Docker ===
+**/docker-compose.override.yml
+**/Dockerfile.local
+**/.dockerignore
+**/.container-config/
+
+# === Go (api-golang) ===
+api-golang/bin/
+api-golang/pkg/
+api-golang/coverage.out
+
+# Go build artifacts
+*.exe
+*.out
+*.test
+
+# === Node.js (api-node, client-react) ===
+**/node_modules/
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+
+# === React (client-react) ===
+client-react/.vite/
+client-react/.next/
+client-react/dist/
+client-react/.eslintcache
+
+# === TypeScript ===
+**/*.tsbuildinfo
+
+# === Python (load-generator-python) ===
+load-generator-python/__pycache__/
+load-generator-python/*.pyc
+load-generator-python/.mypy_cache/
+load-generator-python/.pytest_cache/
+load-generator-python/.venv/
+load-generator-python/venv/
+load-generator-python/env/
+
+# === PostgreSQL init (migrations) ===
+*.sql~               # редакторные временные файлы
+postgresql/tmp/
+postgresql/logs/
+
+# === Test files & coverage ===
+**/coverage/
+**/test-results/
+**/*.lcov
+**/jest-cache/
+**/jest-coverage/
+
+# === Editor configs ===
+.vscode/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+# === OS-specific ===
+ehthumbs.db
+Icon?
+Desktop.ini
