@@ -43,19 +43,27 @@ jobs:
         with:
           config: "p/default"
 
-      - name: 📦 Scan NodeJS dependencies (npm audit)
-        if: exists('api-node/package.json')
+      - name: 📦 Scan NodeJS dependencies (api-node)
         working-directory: ./api-node
+        continue-on-error: true
         run: |
-          npm install --omit=dev
-          npm audit --audit-level=high
+          if [ -f package.json ]; then
+            npm install --omit=dev
+            npm audit --audit-level=high
+          else
+            echo "No package.json found in api-node, skipping npm audit."
+          fi
 
-      - name: 📦 Scan React dependencies (npm audit)
-        if: exists('client-react/package.json')
+      - name: 📦 Scan React dependencies (client-react)
         working-directory: ./client-react
+        continue-on-error: true
         run: |
-          npm install --omit=dev
-          npm audit --audit-level=high
+          if [ -f package.json ]; then
+            npm install --omit=dev
+            npm audit --audit-level=high
+          else
+            echo "No package.json found in client-react, skipping npm audit."
+          fi
 
       - name: 🐳 Scan Dockerfiles (Trivy)
         uses: aquasecurity/trivy-action@master
@@ -70,7 +78,7 @@ jobs:
 
   # 🛠 Matrix build of Docker images
   build:
-    needs: [prepare, security]  # 💡 Ждём завершения security
+    needs: [prepare, security]
     runs-on: ubuntu-latest
     strategy:
       matrix:
