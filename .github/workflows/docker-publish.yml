@@ -30,9 +30,47 @@ jobs:
         id: tag
         run: echo "tag=${{ steps.date.outputs.date }}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
 
+  # 🔐 DevSecOps Security Stage
+  security:
+    name: 🔐 Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🧠 Run Semgrep (SAST)
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: "p/default"
+
+      - name: 📦 Scan NodeJS dependencies (npm audit)
+        if: exists('api-node/package.json')
+        working-directory: ./api-node
+        run: |
+          npm install --omit=dev
+          npm audit --audit-level=high
+
+      - name: 📦 Scan React dependencies (npm audit)
+        if: exists('client-react/package.json')
+        working-directory: ./client-react
+        run: |
+          npm install --omit=dev
+          npm audit --audit-level=high
+
+      - name: 🐳 Scan Dockerfiles (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: .
+          exit-code: 1
+          format: table
+
+      - name: 🔍 Scan for secrets (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+
   # 🛠 Matrix build of Docker images
   build:
-    needs: prepare
+    needs: [prepare, security]  # 💡 Ждём завершения security
     runs-on: ubuntu-latest
     strategy:
       matrix:
