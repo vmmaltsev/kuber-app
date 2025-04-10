@@ -1,0 +1,143 @@
+name: Build and Publish Docker images
+
+on:
+  push:
+    branches: [ main ]
+    # Также можно указать конкретные пути или теги, если нужно
+    # paths:
+    #   - 'api-golang/**'
+    #   - 'api-node/**'
+    #   - 'client-react/**'
+    #   - 'load-generator-python/**'
+    #   - 'postgresql/**'
+    #   - 'docker-compose.yaml'
+    # tags:
+    #   - 'v*'
+
+env:
+  # Используем переменную для Docker Hub username
+  DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+  # Префикс для имён образов
+  IMAGE_PREFIX: ${{ secrets.DOCKER_HUB_USERNAME }}/demo-app
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    
+    # Нужны права для push в GitHub Container Registry
+    permissions:
+      contents: read
+      packages: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      
+      # Определение текущей даты и времени для тега
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+      
+      # Определение короткого SHA для тега
+      - name: Get short SHA
+        id: sha
+        run: echo "sha=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
+      
+      # Создание тега, который будем использовать для всех образов
+      - name: Set tag name
+        id: tag
+        run: echo "tag=${{ steps.date.outputs.date }}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
+      
+      # Шаг 1: Сборка и публикация api-golang
+      - name: Build and push api-golang
+        uses: docker/build-push-action@v6
+        with:
+          context: ./api-golang
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-golang:latest
+            ${{ env.IMAGE_PREFIX }}-golang:${{ steps.tag.outputs.tag }}
+          cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-golang:latest
+          cache-to: type=inline
+      
+      # Шаг 2: Сборка и публикация api-node
+      - name: Build and push api-node
+        uses: docker/build-push-action@v6
+        with:
+          context: ./api-node
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-node:latest
+            ${{ env.IMAGE_PREFIX }}-node:${{ steps.tag.outputs.tag }}
+          cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-node:latest
+          cache-to: type=inline
+      
+      # Шаг 3: Сборка и публикация client-react
+      - name: Build and push client-react
+        uses: docker/build-push-action@v6
+        with:
+          context: ./client-react
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-client:latest
+            ${{ env.IMAGE_PREFIX }}-client:${{ steps.tag.outputs.tag }}
+          cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-client:latest
+          cache-to: type=inline
+      
+      # Шаг 4: Сборка и публикация load-generator-python
+      - name: Build and push load-generator-python
+        uses: docker/build-push-action@v6
+        with:
+          context: ./load-generator-python
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-load-generator:latest
+            ${{ env.IMAGE_PREFIX }}-load-generator:${{ steps.tag.outputs.tag }}
+          cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-load-generator:latest
+          cache-to: type=inline
+      
+      # Шаг 5: Сборка и публикация postgresql с миграциями
+      - name: Build and push postgresql
+        uses: docker/build-push-action@v6
+        with:
+          context: ./postgresql
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-postgresql:latest
+            ${{ env.IMAGE_PREFIX }}-postgresql:${{ steps.tag.outputs.tag }}
+          cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-postgresql:latest
+          cache-to: type=inline
+      
+      # Шаг 6: Создание и обновление файла с версиями образов (опционально)
+      - name: Update version manifest
+        run: |
+          echo "# Deployment manifest - generated on $(date)" > VERSION.md
+          echo "Tag: ${{ steps.tag.outputs.tag }}" >> VERSION.md
+          echo "Commit: ${{ github.sha }}" >> VERSION.md
+          echo "Date: $(date)" >> VERSION.md
+          echo "Images:" >> VERSION.md
+          echo "- ${{ env.IMAGE_PREFIX }}-golang:${{ steps.tag.outputs.tag }}" >> VERSION.md
+          echo "- ${{ env.IMAGE_PREFIX }}-node:${{ steps.tag.outputs.tag }}" >> VERSION.md
+          echo "- ${{ env.IMAGE_PREFIX }}-client:${{ steps.tag.outputs.tag }}" >> VERSION.md
+          echo "- ${{ env.IMAGE_PREFIX }}-load-generator:${{ steps.tag.outputs.tag }}" >> VERSION.md
+          echo "- ${{ env.IMAGE_PREFIX }}-postgresql:${{ steps.tag.outputs.tag }}" >> VERSION.md
+      
+      # Шаг 7: Commit и пуш файла версий (опционально)
+      - name: Commit version manifest
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update version manifest [skip ci]"
+          file_pattern: VERSION.md
