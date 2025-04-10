@@ -3,12 +3,24 @@ require("dotenv").config(); // Поддержка .env
 const { getDateTimeAndRequests, insertRequest } = require("./db");
 const express = require("express");
 const morgan = require("morgan");
+const cookieParser = require("cookie-parser");
+const csrf = require("csurf");
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// HTTP логгирование
+// 📥 Middleware
 app.use(morgan("tiny"));
+app.use(cookieParser()); // обязательный для работы csrf
+
+// 🛡️ Включаем CSRF-защиту через cookie
+const csrfProtection = csrf({ cookie: true });
+app.use(csrfProtection);
+
+// 👇 Добавляем route, который отдаёт CSRF-токен клиенту
+app.get("/csrf-token", (req, res) => {
+    res.json({ csrfToken: req.csrfToken() });
+});
 
 // Главный endpoint
 app.get("/", async (req, res) => {
