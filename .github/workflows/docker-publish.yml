@@ -1,4 +1,4 @@
-name: Build and Publish Docker images
+name: Build and Publish Docker Images
 
 on:
   push:
@@ -9,30 +9,12 @@ env:
   IMAGE_PREFIX: ${{ secrets.DOCKER_HUB_USERNAME }}/demo-app
 
 jobs:
-  build-and-push:
-    name: Build and Push Docker Images
+  # 🏁 Подготовка общих переменных
+  prepare:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write # нужно для push через GITHUB_TOKEN
-      packages: write
-
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
-      - name: ⬇️ Checkout repository
-        uses: actions/checkout@v4
-
-      - name: 🧱 Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: 🛠 Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: 🔐 Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-
       - name: 🗓 Get current date
         id: date
         run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
@@ -45,75 +27,64 @@ jobs:
         id: tag
         run: echo "tag=${{ steps.date.outputs.date }}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
 
-      - name: 🐳 Build and push api-golang
+  # 🛠 Matrix-билд Docker-образов
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - api-golang
+          - api-node
+          - client-react
+          - load-generator-python
+          - postgresql
+    name: 🐳 Build ${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🛠 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: 🚀 Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: ./api-golang
+          context: ./${{ matrix.service }}
           push: true
           tags: |
-            ${{ env.IMAGE_PREFIX }}-golang:latest
-            ${{ env.IMAGE_PREFIX }}-golang:${{ steps.tag.outputs.tag }}
-          cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-golang:latest
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}
+          cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
           cache-to: type=inline
 
-      - name: 🐳 Build and push api-node
-        uses: docker/build-push-action@v6
-        with:
-          context: ./api-node
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}-node:latest
-            ${{ env.IMAGE_PREFIX }}-node:${{ steps.tag.outputs.tag }}
-          cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-node:latest
-          cache-to: type=inline
+  # 🧾 Формирование VERSION.md после всех билдов
+  manifest:
+    name: 📄 Generate Version Manifest
+    runs-on: ubuntu-latest
+    needs: [build, prepare]
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: 🐳 Build and push client-react
-        uses: docker/build-push-action@v6
-        with:
-          context: ./client-react
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}-client:latest
-            ${{ env.IMAGE_PREFIX }}-client:${{ steps.tag.outputs.tag }}
-          cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-client:latest
-          cache-to: type=inline
-
-      - name: 🐳 Build and push load-generator-python
-        uses: docker/build-push-action@v6
-        with:
-          context: ./load-generator-python
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}-load-generator:latest
-            ${{ env.IMAGE_PREFIX }}-load-generator:${{ steps.tag.outputs.tag }}
-          cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-load-generator:latest
-          cache-to: type=inline
-
-      - name: 🐳 Build and push postgresql
-        uses: docker/build-push-action@v6
-        with:
-          context: ./postgresql
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}-postgresql:latest
-            ${{ env.IMAGE_PREFIX }}-postgresql:${{ steps.tag.outputs.tag }}
-          cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-postgresql:latest
-          cache-to: type=inline
-
-      - name: 📄 Update version manifest
+      - name: 📝 Generate VERSION.md
         run: |
           echo "# Deployment manifest - generated on $(date)" > VERSION.md
-          echo "Tag: ${{ steps.tag.outputs.tag }}" >> VERSION.md
+          echo "Tag: ${{ needs.prepare.outputs.tag }}" >> VERSION.md
           echo "Commit: ${{ github.sha }}" >> VERSION.md
           echo "Date: $(date)" >> VERSION.md
           echo "Images:" >> VERSION.md
-          echo "- ${{ env.IMAGE_PREFIX }}-golang:${{ steps.tag.outputs.tag }}" >> VERSION.md
-          echo "- ${{ env.IMAGE_PREFIX }}-node:${{ steps.tag.outputs.tag }}" >> VERSION.md
-          echo "- ${{ env.IMAGE_PREFIX }}-client:${{ steps.tag.outputs.tag }}" >> VERSION.md
-          echo "- ${{ env.IMAGE_PREFIX }}-load-generator:${{ steps.tag.outputs.tag }}" >> VERSION.md
-          echo "- ${{ env.IMAGE_PREFIX }}-postgresql:${{ steps.tag.outputs.tag }}" >> VERSION.md
+          echo "- ${{ env.IMAGE_PREFIX }}-api-golang:${{ needs.prepare.outputs.tag }}" >> VERSION.md
+          echo "- ${{ env.IMAGE_PREFIX }}-api-node:${{ needs.prepare.outputs.tag }}" >> VERSION.md
+          echo "- ${{ env.IMAGE_PREFIX }}-client-react:${{ needs.prepare.outputs.tag }}" >> VERSION.md
+          echo "- ${{ env.IMAGE_PREFIX }}-load-generator-python:${{ needs.prepare.outputs.tag }}" >> VERSION.md
+          echo "- ${{ env.IMAGE_PREFIX }}-postgresql:${{ needs.prepare.outputs.tag }}" >> VERSION.md
 
-      - name: ✅ Commit version manifest
+      - name: ✅ Commit VERSION.md
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: update version manifest [skip ci]"
