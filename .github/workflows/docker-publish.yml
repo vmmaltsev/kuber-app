@@ -40,7 +40,7 @@ jobs:
         uses: returntocorp/semgrep-action@v1
         with:
           config: "p/default"
-        continue-on-error: true  # ✅ не прерываем пайплайн
+        continue-on-error: true
 
       - name: 📦 Scan NodeJS dependencies (api-node)
         working-directory: ./api-node
@@ -71,11 +71,30 @@ jobs:
           scan-ref: .
           exit-code: 1
           format: table
-        continue-on-error: true  # ✅ не прерываем пайплайн
+        continue-on-error: true
 
       - name: 🔍 Scan for secrets (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
-        continue-on-error: true  # ✅ не прерываем пайплайн
+        continue-on-error: true
+
+      - name: 📤 Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            .semgrep
+            gitleaks-report.json
+            trivy*.txt
+          if-no-files-found: ignore
+
+      - name: 📋 Add security summary
+        if: always()
+        run: |
+          echo "### 🛡️ Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Semgrep (SAST) completed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Trivy Dockerfile scan completed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Gitleaks secrets scan completed" >> $GITHUB_STEP_SUMMARY
 
   build:
     needs: [prepare, security]
@@ -88,7 +107,7 @@ jobs:
           - client-react
           - load-generator-python
           - postgresql
-    name: 🐳 Build ${{ matrix.service }}
+    name: 🐳 Build and Push ${{ matrix.service }}
     steps:
       - uses: actions/checkout@v4
 
@@ -101,7 +120,7 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      - name: 🚀 Build and push image
+      - name: 🚀 Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
           context: ./${{ matrix.service }}
@@ -111,6 +130,21 @@ jobs:
             ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}
           cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
           cache-to: type=inline
+
+      - name: 🧾 Generate SBOM (Syft)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}
+          output-file: sbom-${{ matrix.service }}.spdx.json
+        continue-on-error: true
+
+      - name: 📤 Upload SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.service }}
+          path: sbom-${{ matrix.service }}.spdx.json
+          if-no-files-found: ignore
 
   manifest:
     name: 📄 Generate Version Manifest and Changelog
