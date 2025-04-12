@@ -18,8 +18,8 @@ COPY --from=builder /app/app /app/app
 ENV PORT=8000
 
 # Создание непривилегированного пользователя
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-RUN chown -R appuser:appgroup /app
+RUN addgroup -S nonroot && adduser -S non-root -G nonroot
+RUN chown -R non-root:nonroot /app
 
 # Настройка healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
@@ -28,6 +28,6 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 EXPOSE 8000
 
 # Переключение на непривилегированного пользователя
-USER appuser
+USER non-root
 
 ENTRYPOINT ["/app/app"]
