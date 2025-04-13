@@ -12,6 +12,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копируем приложение
 COPY . .
 
+# 🌡 HEALTHCHECK через shell-скрипт (нужно до смены пользователя!)
+COPY docker-healthcheck.sh /usr/local/bin/docker-healthcheck.sh
+RUN chmod +x /usr/local/bin/docker-healthcheck.sh
+
 # 🔐 Создание непривилегированного пользователя
 RUN addgroup --system appgroup && \
     adduser --system --ingroup appgroup appuser && \
@@ -20,10 +24,7 @@ RUN addgroup --system appgroup && \
 # 🔐 Переключение на пользователя
 USER appuser
 
-# 🌡 HEALTHCHECK через shell-скрипт
-COPY docker-healthcheck.sh /usr/local/bin/docker-healthcheck.sh
-RUN chmod +x /usr/local/bin/docker-healthcheck.sh
-
+# HEALTHCHECK (exec-форма предпочтительна)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD ["/usr/local/bin/docker-healthcheck.sh"]
 
