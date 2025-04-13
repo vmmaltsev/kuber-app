@@ -3,6 +3,7 @@ import {
     useEffect,
     useState,
     useCallback,
+    useMemo,
     ReactNode,
 } from 'react';
 
@@ -42,8 +43,10 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
         localStorage.setItem('theme', theme);
     }, [theme]);
 
+    const contextValue = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
+
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme }}>
+        <ThemeContext.Provider value={contextValue}>
             {children}
         </ThemeContext.Provider>
     );

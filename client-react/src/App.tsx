@@ -22,8 +22,8 @@ interface ApiResponse {
 }
 
 interface CurrentTimeProps {
-  api: string;
-  refreshInterval: number;
+  readonly api: string;
+  readonly refreshInterval: number;
 }
 
 function CurrentTime({ api, refreshInterval }: CurrentTimeProps) {

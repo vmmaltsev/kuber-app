@@ -36,7 +36,7 @@ USER appuser
 
 # 🌡 HEALTHCHECK для React + nginx
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --spider -q http://localhost:8080/ || exit 1
+  CMD ["wget", "--spider", "-q", "http://localhost:8080/"]
 
 # Открываем порт
 EXPOSE 8080

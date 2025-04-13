@@ -23,12 +23,11 @@ RUN addgroup -S nonroot && \
     adduser -S non-root -G nonroot && \
     chown -R non-root:nonroot /app
 
-# Переключение на непривилегированного пользователя
 USER non-root
 
-# Настройка проверки работоспособности контейнера (с командой CMD, выполняемой от non-root)
+# Используем exec-форму для healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:${PORT}/health || exit 1
+  CMD ["curl", "-f", "http://localhost:8000/health"]
 
 EXPOSE 8000
 

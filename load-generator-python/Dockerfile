@@ -12,15 +12,19 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копируем приложение
 COPY . .
 
-# 🔐 Добавим непривилегированного пользователя
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser \
-    && chown -R appuser:appgroup /app
+# 🔐 Создание непривилегированного пользователя
+RUN addgroup --system appgroup && \
+    adduser --system --ingroup appgroup appuser && \
+    chown -R appuser:appgroup /app
 
-# 🔐 Переключимся на непривилегированного пользователя
+# 🔐 Переключение на пользователя
 USER appuser
 
-# 🌡 HEALTHCHECK: проверяет, работает ли главный процесс (по PID)
+# 🌡 HEALTHCHECK через shell-скрипт
+COPY docker-healthcheck.sh /usr/local/bin/docker-healthcheck.sh
+RUN chmod +x /usr/local/bin/docker-healthcheck.sh
+
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD pgrep -f main.py || exit 1
+  CMD ["/usr/local/bin/docker-healthcheck.sh"]
 
 CMD ["python", "main.py"]

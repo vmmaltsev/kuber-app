@@ -12,7 +12,7 @@ export const ThemeToggle = () => {
             aria-label={`Switch to ${nextTheme} theme`}
             onClick={toggleTheme}
         >
-            <span role="img" aria-hidden="true" style={{ fontSize: '1.5rem' }}>
+            <span aria-hidden="true" style={{ fontSize: '1.5rem' }}>
                 {theme === 'light' ? '🌙' : '☀️'}
             </span>
         </button>
