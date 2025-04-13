@@ -42,10 +42,16 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🔍 Run SonarQube Scan
+      - name: 🔍 Run SonarQube Scan (inline config)
         uses: SonarSource/sonarqube-scan-action@v2
         with:
-          projectBaseDir: .
+          args: >
+            -Dsonar.projectKey=kuber-app
+            -Dsonar.sources=.
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
