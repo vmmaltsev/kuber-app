@@ -16,19 +16,30 @@ RUN npm run build
 # === Stage 2: Serve with secure nginx ===
 FROM nginx:stable-alpine AS prod
 
-# Create working directories for caches and logs
+# Создаём каталоги и настраиваем права (для временных файлов nginx)
 RUN mkdir -p /tmp/nginx/cache /tmp/nginx/run /tmp/nginx/logs \
     && chmod -R 777 /tmp/nginx
 
-# Copy Nginx configurations
+# Копируем конфигурации
 COPY --link nginx.conf /etc/nginx/conf.d/default.conf
 COPY --link main-nginx.conf /tmp/nginx.conf
 
-# Copy built React application
+# Копируем собранное приложение
 COPY --link --from=build /usr/src/app/dist/ /usr/share/nginx/html
 
-# Expose port
+# 🔐 Создание непривилегированного пользователя
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
+    && chown -R appuser:appgroup /usr/share/nginx/html
+
+# 🔐 Переключение на непривилегированного пользователя
+USER appuser
+
+# 🌡 HEALTHCHECK для React + nginx
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --spider -q http://localhost:8080/ || exit 1
+
+# Открываем порт
 EXPOSE 8080
 
-# Run NGINX
+# Запуск nginx
 CMD ["nginx", "-c", "/tmp/nginx.conf"]
