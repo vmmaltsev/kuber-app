@@ -29,6 +29,27 @@ jobs:
         id: tag
         run: echo "tag=${{ steps.date.outputs.date }}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
 
+  sonar:
+    name: 🔎 SonarQube Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Java (required for SonarScanner)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🔍 Run SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v2
+        with:
+          projectBaseDir: .
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
   security:
     name: 🔐 Security Scan
     runs-on: ubuntu-latest
@@ -97,7 +118,7 @@ jobs:
           echo "- ✅ Gitleaks secrets scan completed" >> $GITHUB_STEP_SUMMARY
 
   build:
-    needs: [prepare, security]
+    needs: [prepare, security, sonar]
     runs-on: ubuntu-latest
     strategy:
       matrix:
