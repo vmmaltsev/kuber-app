@@ -42,11 +42,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🔍 Run SonarQube Scan (inline config)
+      - name: 🔍 Run SonarQube Scan (with org from secrets)
         uses: SonarSource/sonarqube-scan-action@v2
         with:
           args: >
-            -Dsonar.projectKey=kuber-app
+            -Dsonar.projectKey=vmmaltsev_kuber-app
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
             -Dsonar.sources=.
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**
             -Dsonar.sourceEncoding=UTF-8
