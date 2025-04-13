@@ -1,25 +1,42 @@
 require("dotenv").config(); // Поддержка .env
 
-const { getDateTimeAndRequests, insertRequest } = require("./db");
 const express = require("express");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
-const csrf = require("csurf");
+const { doubleCsrf } = require("csrf-csrf");
+const { getDateTimeAndRequests, insertRequest } = require("./db");
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 // 📥 Middleware
 app.use(morgan("tiny"));
-app.use(cookieParser()); // обязательный для работы csrf
+app.use(express.json());
+app.use(cookieParser());
 
-// 🛡️ Включаем CSRF-защиту через cookie
-const csrfProtection = csrf({ cookie: true });
-app.use(csrfProtection);
+// 🛡️ Настройка двойной CSRF-защиты через cookie + заголовок
+const {
+    generateToken,
+    doubleCsrfProtection,
+    invalidCsrfTokenError,
+} = doubleCsrf({
+    getSecret: () => process.env.CSRF_SECRET || "default_csrf_secret_please_change", // лучше через .env
+    cookieName: "csrf_token",
+    cookieOptions: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+    },
+    size: 64,
+    ignoredMethods: ["GET", "HEAD", "OPTIONS"],
+});
 
-// 👇 Добавляем route, который отдаёт CSRF-токен клиенту
+// Включаем CSRF-защиту
+app.use(doubleCsrfProtection);
+
+// 👇 Endpoint, который отдаёт CSRF-токен клиенту
 app.get("/csrf-token", (req, res) => {
-    res.json({ csrfToken: req.csrfToken() });
+    res.json({ csrfToken: generateToken(req, res) });
 });
 
 // Главный endpoint
@@ -41,12 +58,20 @@ app.get("/ping", (_, res) => {
     res.send("pong");
 });
 
+// Обработка CSRF-ошибок
+app.use((err, req, res, next) => {
+    if (err === invalidCsrfTokenError) {
+        return res.status(403).json({ error: "Invalid CSRF token" });
+    }
+    next(err);
+});
+
 // Запуск сервера
 const server = app.listen(port, () => {
     console.log(`🚀 Node API is running on http://localhost:${port}`);
 });
 
-// Корректное завершение по SIGTERM (например, Docker stop)
+// Корректное завершение по SIGTERM
 process.on("SIGTERM", () => {
     console.debug("🛑 SIGTERM received: closing HTTP server");
     server.close(() => {
@@ -54,7 +79,7 @@ process.on("SIGTERM", () => {
     });
 });
 
-// Также обрабатываем Ctrl+C
+// Обработка Ctrl+C
 process.on("SIGINT", () => {
     console.debug("🛑 SIGINT received: shutting down HTTP server");
     server.close(() => {
