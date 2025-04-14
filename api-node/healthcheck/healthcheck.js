@@ -25,7 +25,7 @@ request.on("error", (err) => {
 // Защита от зависания, если сервер не отвечает
 request.setTimeout(2000, () => {
     console.error("❌ Timeout: No response received within 2s");
-    request.abort();
+    request.destroy();
     process.exit(1);
 });
 

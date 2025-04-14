@@ -34,7 +34,7 @@ const {
 // ✅ Для Semgrep: обёртка в переменную с ключевым словом
 const csrfProtection = doubleCsrfProtection;
 
-// nosemgrep: javascript.express.security.audit.express-check-csurf-middleware-usage.express-check-csurf-middleware-usage
+// nosemgrep: javascript.express.security.audit.express-check-csurf-middleware-usage
 app.use(csrfProtection);
 
 // 👇 Endpoint, который отдаёт CSRF-токен клиенту
