@@ -63,7 +63,7 @@ jobs:
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: 🧠 Run Semgrep (SAST)
         uses: returntocorp/semgrep-action@v1
         with:
@@ -119,7 +119,7 @@ jobs:
             trivy*.txt
           if-no-files-found: ignore
 
-      - name: 📋 Add security summary
+      - name: 📌 Add security summary
         if: always()
         run: |
           echo "### 🛡️ Security Scan Summary" >> $GITHUB_STEP_SUMMARY
@@ -142,7 +142,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 🛠 Set up Docker Buildx
+      - name: 👷 Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: 🔐 Log in to Docker Hub
@@ -162,7 +162,37 @@ jobs:
           cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
           cache-to: type=inline
 
-      - name: 🧾 Generate SBOM (Syft)
+      - name: 🐳 Trivy Image Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}
+          format: table
+          exit-code: 0
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+        continue-on-error: true
+
+      - name: 📂 Save Trivy Report
+        if: always()
+        run: |
+          mkdir -p trivy-reports
+          trivy image --format table --severity CRITICAL,HIGH -o trivy-reports/${{ matrix.service }}.txt ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}
+
+      - name: 📤 Upload Trivy Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-${{ matrix.service }}
+          path: trivy-reports/${{ matrix.service }}.txt
+
+      - name: 📌 Add Trivy summary
+        if: always()
+        run: |
+          echo "## 🐳 Trivy Image Scan: ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Image: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Report: trivy-${{ matrix.service }}.txt" >> $GITHUB_STEP_SUMMARY
+
+      - name: 📟 Generate SBOM (Syft)
         uses: anchore/sbom-action@v0
         with:
           image: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}
@@ -176,41 +206,3 @@ jobs:
           name: sbom-${{ matrix.service }}
           path: sbom-${{ matrix.service }}.spdx.json
           if-no-files-found: ignore
-
-  manifest:
-    name: 📄 Generate Version Manifest and Changelog
-    runs-on: ubuntu-latest
-    needs: [build, prepare]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: 📝 Generate VERSION.md
-        run: |
-          echo "# Deployment manifest - generated on $(date)" > VERSION.md
-          echo "Tag: ${{ needs.prepare.outputs.tag }}" >> VERSION.md
-          echo "Commit: ${{ github.sha }}" >> VERSION.md
-          echo "Date: $(date)" >> VERSION.md
-          echo "Images:" >> VERSION.md
-          echo "- ${{ env.IMAGE_PREFIX }}-api-golang:${{ needs.prepare.outputs.tag }}" >> VERSION.md
-          echo "- ${{ env.IMAGE_PREFIX }}-api-node:${{ needs.prepare.outputs.tag }}" >> VERSION.md
-          echo "- ${{ env.IMAGE_PREFIX }}-client-react:${{ needs.prepare.outputs.tag }}" >> VERSION.md
-          echo "- ${{ env.IMAGE_PREFIX }}-load-generator-python:${{ needs.prepare.outputs.tag }}" >> VERSION.md
-          echo "- ${{ env.IMAGE_PREFIX }}-postgresql:${{ needs.prepare.outputs.tag }}" >> VERSION.md
-
-      - name: 🧾 Generate CHANGELOG.md
-        run: |
-          npm install -g conventional-changelog-cli
-          conventional-changelog -p angular -i CHANGELOG.md -s -r 0
-
-      - name: ✅ Commit VERSION.md and CHANGELOG.md
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: update version and changelog [skip ci]"
-          file_pattern: |
-            VERSION.md
-            CHANGELOG.md
-          commit_user_name: github-actions[bot]
-          commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
-          branch: main
-        env:
-          GIT_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
