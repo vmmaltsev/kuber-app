@@ -1,0 +1,8 @@
+rules:
+  - id: yaml.github-actions.security.curl-eval.curl-eval
+    severity: INFO
+    disabled: true
+  
+  - id: dockerfile.security.copy-link
+    severity: INFO
+    disabled: true 

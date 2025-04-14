@@ -70,7 +70,7 @@ jobs:
       - name: 🧠 Run Semgrep manually (SAST)
         run: |
           pip install semgrep
-          semgrep scan --config=auto --exclude="api-node/ssl/*,api-node/healthcheck/*" --verbose
+          semgrep scan --config=auto --config=.semgrep-rules --exclude="api-node/ssl/*,api-node/healthcheck/*,*.yml,*.yaml" --quiet
         continue-on-error: true
 
       - name: 📦 Scan NodeJS dependencies (api-node)

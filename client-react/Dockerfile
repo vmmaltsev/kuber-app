@@ -21,11 +21,11 @@ RUN mkdir -p /tmp/nginx/cache /tmp/nginx/run /tmp/nginx/logs \
     && chmod -R 777 /tmp/nginx
 
 # Копируем конфигурации
-COPY --link nginx.conf /etc/nginx/conf.d/default.conf
-COPY --link main-nginx.conf /tmp/nginx.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY main-nginx.conf /tmp/nginx.conf
 
 # Копируем собранное приложение
-COPY --link --from=build /usr/src/app/dist/ /usr/share/nginx/html
+COPY --from=build /usr/src/app/dist/ /usr/share/nginx/html
 
 # 🔐 Создание непривилегированного пользователя
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup \

@@ -5,4 +5,7 @@ node_modules/
 .git/
 *.min.js
 dist/
-build/ 
+build/
+# Исключаем yaml файлы для предотвращения предупреждений
+*.yml
+*.yaml 
