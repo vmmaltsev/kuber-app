@@ -64,12 +64,14 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
         
-      - name: 🧠 Run Semgrep manually (SAST)
-        run: |
-          echo "Запуск Semgrep с простой конфигурацией"
-          curl -sSL https://raw.githubusercontent.com/returntocorp/semgrep/develop/install.sh | bash
-          echo -e ".git\napi-node/ssl\napi-node/healthcheck\n.github" > .semgrepignore
-          semgrep ci --skip-unknown-extensions --disable-metrics --config=p/r2c-security-audit || true
+      - name: 🧠 Run Semgrep (SAST)
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/ci
+          publishToken: ${{ secrets.SEMGREP_APP_TOKEN || '' }}
+        env:
+          SEMGREP_SKIP_UNKNOWN_EXTENSIONS: "1"
+          SEMGREP_EXCLUDE: "api-node/ssl,api-node/healthcheck"
         continue-on-error: true
 
       - name: 📦 Scan NodeJS dependencies (api-node)
