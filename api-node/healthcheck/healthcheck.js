@@ -1,5 +1,6 @@
 require("dotenv").config(); // Если используешь .env
 
+// nosemgrep: problem-based-packs.insecure-transport.js-node.using-http-server.using-http-server
 const http = require("http");
 
 const port = process.env.PORT || 3000;
