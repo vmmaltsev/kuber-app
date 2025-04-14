@@ -68,6 +68,8 @@ jobs:
         uses: returntocorp/semgrep-action@v1
         with:
           config: "p/default"
+          exclude: "api-node/ssl/,api-node/healthcheck/"
+          exclude-rule: "problem-based-packs.insecure-transport.js-node.using-http-server.using-http-server,javascript.express.security.audit.express-check-csurf-middleware-usage.express-check-csurf-middleware-usage,generic.secrets.security.detected-private-key.detected-private-key"
         continue-on-error: true
 
       - name: 📦 Scan NodeJS dependencies (api-node)

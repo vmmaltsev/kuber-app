@@ -1,0 +1,8 @@
+# Игнорируем приватные ключи
+ssl/
+# Другие файлы для игнорирования
+.env
+node_modules/
+npm-debug.log
+yarn-error.log
+.DS_Store 

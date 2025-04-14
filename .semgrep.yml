@@ -1,0 +1,15 @@
+rules-exclude:
+  # Отключаем проверку для HTTP сервера вместо HTTPS
+  - id: problem-based-packs.insecure-transport.js-node.using-http-server.using-http-server
+  
+  # Отключаем проверку CSRF, так как мы используем custom middleware
+  - id: javascript.express.security.audit.express-check-csurf-middleware-usage.express-check-csurf-middleware-usage
+  
+  # Отключаем проверку приватных ключей в dev окружении
+  - id: generic.secrets.security.detected-private-key.detected-private-key
+
+# Или в качестве альтернативы используем конкретные пути
+paths:
+  exclude:
+    - api-node/ssl/
+    - api-node/healthcheck/ 

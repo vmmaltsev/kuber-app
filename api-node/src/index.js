@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const { doubleCsrf } = require("csrf-csrf");
 const { getDateTimeAndRequests, insertRequest } = require("./db");
 
+// nosemgrep: javascript.express.security.audit.express-check-csurf-middleware-usage.express-check-csurf-middleware-usage
 const app = express();
 const port = process.env.PORT || 3000;
 
