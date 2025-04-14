@@ -1,12 +1,6 @@
-# Игнорирование файлов и директорий для Semgrep
-
-# Игнорируем SSL директорию с приватными ключами
-api-node/ssl/
-
-# Игнорируем healthcheck скрипты (HTTP разрешен для внутренних проверок)
-api-node/healthcheck/
-
-# Стандартные исключения
+# Исключения для Semgrep в формате .gitignore
+api-node/ssl/*
+api-node/healthcheck/*
 node_modules/
 .git/
 *.min.js

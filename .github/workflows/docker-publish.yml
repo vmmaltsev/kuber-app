@@ -64,10 +64,13 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🧠 Run Semgrep (SAST)
-        uses: returntocorp/semgrep-action@v1
-        with:
-          config: ".semgrep.yml,p/default"
+      - name: 📂 List directory structure
+        run: find . -name "*.semgrep*" -o -name ".nosemgrep" | sort
+        
+      - name: 🧠 Run Semgrep manually (SAST)
+        run: |
+          pip install semgrep
+          semgrep scan --config=auto --exclude="api-node/ssl/*,api-node/healthcheck/*" --verbose
         continue-on-error: true
 
       - name: 📦 Scan NodeJS dependencies (api-node)

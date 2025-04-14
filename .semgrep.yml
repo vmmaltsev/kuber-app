@@ -1,4 +1,13 @@
-rules: []  # Необходимо для валидации схемы
+rules:
+  - id: custom.js.disable-example
+    pattern: "1 == 1"
+    message: "Placeholder rule - ignore this"
+    languages: [javascript]
+    severity: INFO
+
+ignore-paths:
+  - api-node/ssl/
+  - api-node/healthcheck/
 
 # Отключение правил через Semgrep ruleset запросы
 rule-exceptions:
