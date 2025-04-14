@@ -31,18 +31,19 @@ jobs:
 
   sonar:
     name: 🔎 SonarQube Scan
+    needs: prepare
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: ⚙️ Set up Java (required for SonarScanner)
+      - name: ⚙️ Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🔍 Run SonarQube Scan (with org from secrets)
+      - name: 🔍 Run SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v2
         with:
           args: >
@@ -59,6 +60,7 @@ jobs:
 
   security:
     name: 🔐 Security Scan
+    needs: prepare
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout repository
@@ -73,26 +75,22 @@ jobs:
           SEMGREP_EXCLUDE: "api-node/ssl,api-node/healthcheck"
         continue-on-error: true
 
-      - name: 📦 Scan NodeJS dependencies (api-node)
+      - name: 📦 Scan NodeJS dependencies
         working-directory: ./api-node
         continue-on-error: true
         run: |
           if [ -f package.json ]; then
             npm install --omit=dev
             npm audit --audit-level=high
-          else
-            echo "No package.json found in api-node, skipping npm audit."
           fi
 
-      - name: 📦 Scan React dependencies (client-react)
+      - name: 📦 Scan React dependencies
         working-directory: ./client-react
         continue-on-error: true
         run: |
           if [ -f package.json ]; then
             npm install --omit=dev
             npm audit --audit-level=high
-          else
-            echo "No package.json found in client-react, skipping npm audit."
           fi
 
       - name: 🐳 Scan Dockerfiles (Trivy)
@@ -206,3 +204,31 @@ jobs:
           name: sbom-${{ matrix.service }}
           path: sbom-${{ matrix.service }}.spdx.json
           if-no-files-found: ignore
+
+  manifest:
+    name: 📄 Generate Manifest
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📝 Generate VERSION.md
+        run: |
+          echo "# Deployment manifest" > VERSION.md
+          echo "Generated at: $(date)" >> VERSION.md
+          echo "Tag: ${{ needs.prepare.outputs.tag }}" >> VERSION.md
+          echo "Commit: ${{ github.sha }}" >> VERSION.md
+
+      - name: 📋 Generate CHANGELOG.md
+        run: |
+          npm install -g conventional-changelog-cli
+          conventional-changelog -p angular -i CHANGELOG.md -s -r 0
+
+      - name: 📤 Upload Docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-docs
+          path: |
+            VERSION.md
+            CHANGELOG.md
