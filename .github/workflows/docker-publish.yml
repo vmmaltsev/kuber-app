@@ -68,7 +68,6 @@ jobs:
         uses: returntocorp/semgrep-action@v1
         with:
           config: p/ci
-          publishToken: ${{ secrets.SEMGREP_APP_TOKEN || '' }}
         env:
           SEMGREP_SKIP_UNKNOWN_EXTENSIONS: "1"
           SEMGREP_EXCLUDE: "api-node/ssl,api-node/healthcheck"
