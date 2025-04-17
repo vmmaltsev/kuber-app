@@ -7,7 +7,6 @@ RUN go mod tidy && go build -o api-golang main.go
 FROM alpine:3.20
 WORKDIR /app
 COPY --from=builder /app/api-golang .
-COPY --from=builder /app/.env .
 
 # Добавляем непривилегированного пользователя
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
