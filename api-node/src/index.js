@@ -3,14 +3,20 @@ require("dotenv").config(); // Поддержка .env
 const express = require("express");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+const cors = require("cors");
 const { doubleCsrf } = require("csrf-csrf");
-const { getDateTimeAndRequests, insertRequest } = require("./db");
+const db = require("./db");
+const RequestService = require("./service/requestService");
+const createMainRouter = require("./routes/main");
 
 // nosemgrep: javascript.express.security.audit.express-check-csurf-middleware-usage.express-check-csurf-middleware-usage
 const app = express();
 const port = process.env.PORT || 3000;
 
 // 📥 Middleware
+app.use(helmet());
+app.use(cors());
 app.use(morgan("tiny"));
 app.use(express.json());
 app.use(cookieParser());
@@ -43,24 +49,9 @@ app.get("/csrf-token", (req, res) => {
     res.json({ csrfToken: generateToken(req, res) });
 });
 
-// Главный endpoint
-app.get("/", async (req, res) => {
-    try {
-        await insertRequest();
-        const response = await getDateTimeAndRequests();
-        response.api = "node";
-        console.log(response);
-        res.json(response);
-    } catch (err) {
-        console.error("❌ Error in / handler:", err);
-        res.status(500).json({ error: "Internal Server Error" });
-    }
-});
-
-// Healthcheck endpoint
-app.get("/ping", (_, res) => {
-    res.send("pong");
-});
+// DI сервисов
+const requestService = new RequestService(db);
+app.use("/", createMainRouter({ requestService, csrfProtection, generateToken }));
 
 // Обработка CSRF-ошибок
 app.use((err, req, res, next) => {
@@ -68,6 +59,12 @@ app.use((err, req, res, next) => {
         return res.status(403).json({ error: "Invalid CSRF token" });
     }
     next(err);
+});
+
+// Централизованный error handler
+app.use((err, req, res, next) => {
+    console.error("❌ Unhandled error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
 });
 
 // Запуск сервера

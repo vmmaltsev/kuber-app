@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -30,11 +29,7 @@ func InitDB(connString string) (*Database, error) {
 // InsertView inserts an entry into the request table
 func (db *Database) InsertView(ctx context.Context) error {
 	_, err := db.Pool.Exec(ctx, "INSERT INTO request (api_name) VALUES ($1);", "go")
-	if err != nil {
-		log.Printf("InsertView failed: %v", err)
-		return err
-	}
-	return nil
+	return err
 }
 
 // GetTimeAndRequestCount returns current time and number of requests
@@ -48,7 +43,6 @@ func (db *Database) GetTimeAndRequestCount(ctx context.Context) (time.Time, int,
 	).Scan(&tm, &reqCount)
 
 	if err != nil {
-		log.Printf("GetTimeAndRequestCount failed: %v", err)
 		return time.Time{}, 0, err
 	}
 

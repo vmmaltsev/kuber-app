@@ -1,10 +1,13 @@
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { useEffect, useState, useContext } from 'react';
-import axios from 'axios';
+import { useContext } from 'react';
 import './App.css';
 import { ThemeProvider, ThemeContext } from './ThemeContext';
 import { ThemeToggle } from './ThemeToggle';
+import { API_ENDPOINTS, REFRESH_INTERVAL_OPTIONS } from './constants';
+import ErrorBoundary from './components/ErrorBoundary';
+import CurrentTimeBlock from './components/CurrentTimeBlock';
+import { useLocalStorage } from './hooks/useLocalStorage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,50 +18,8 @@ const queryClient = new QueryClient({
   },
 });
 
-interface ApiResponse {
-  api: string;
-  currentTime: string;
-  requestCount: number;
-}
-
-interface CurrentTimeProps {
-  readonly api: string;
-  readonly refreshInterval: number;
-}
-
-function CurrentTime({ api, refreshInterval }: CurrentTimeProps) {
-  const { theme } = useContext(ThemeContext);
-
-  const { data, error, isFetching, isLoading } = useQuery<ApiResponse>({
-    queryKey: [api],
-    queryFn: () => axios.get(api).then((res) => res.data),
-    refetchInterval: refreshInterval,
-  });
-
-  if (isLoading) return <p>Loading {api}...</p>;
-  if (error instanceof Error) return <p>Error: {error.message}</p>;
-
-  return (
-    <section className={`current-time-block ${theme}`}>
-      <hr />
-      <p><strong>API:</strong> {data?.api}</p>
-      <p><strong>Time from DB:</strong> {data?.currentTime}</p>
-      <p><strong>Request Count:</strong> {data?.requestCount}</p>
-      {isFetching && <small className="updating-indicator">Updating...</small>}
-    </section>
-  );
-}
-
 function AppContent() {
-  const [refreshInterval, setRefreshInterval] = useState<number>(() => {
-    const saved = localStorage.getItem('refresh-interval');
-    return saved ? parseInt(saved, 10) : 5000;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('refresh-interval', refreshInterval.toString());
-  }, [refreshInterval]);
-
+  const [refreshInterval, setRefreshInterval] = useLocalStorage<number>('refresh-interval', 5000);
   const { theme } = useContext(ThemeContext);
 
   return (
@@ -75,16 +36,15 @@ function AppContent() {
           value={refreshInterval}
           onChange={(e) => setRefreshInterval(Number(e.target.value))}
         >
-          <option value="1000">1s</option>
-          <option value="5000">5s</option>
-          <option value="10000">10s</option>
-          <option value="30000">30s</option>
-          <option value="60000">1 min</option>
+          {REFRESH_INTERVAL_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
         </select>
       </div>
 
-      <CurrentTime api="/api/golang/" refreshInterval={refreshInterval} />
-      <CurrentTime api="/api/node/" refreshInterval={refreshInterval} />
+      {API_ENDPOINTS.map((api) => (
+        <CurrentTimeBlock key={api.url} api={api.url} refreshInterval={refreshInterval} />
+      ))}
     </main>
   );
 }
@@ -93,7 +53,9 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <AppContent />
+        <ErrorBoundary>
+          <AppContent />
+        </ErrorBoundary>
         <ReactQueryDevtools initialIsOpen={false} />
       </ThemeProvider>
     </QueryClientProvider>

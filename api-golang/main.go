@@ -1,80 +1,80 @@
 package main
 
 import (
-	"log"
+	"context"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"api-golang/database"
+	"api-golang/internal/service"
+	"api-golang/handlers"
 
-	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/kelseyhightower/envconfig"
+	"github.com/rs/zerolog/log"
 )
+
+type Config struct {
+	Port        string `envconfig:"PORT" default:"8000"`
+	DatabaseURL string `envconfig:"DATABASE_URL"`
+	DatabaseURLFile string `envconfig:"DATABASE_URL_FILE"`
+}
 
 func main() {
 	_ = godotenv.Load()
 
-	databaseURL := getDatabaseURL()
+	var cfg Config
+	if err := envconfig.Process("", &cfg); err != nil {
+		log.Fatal().Err(err).Msg("Failed to load config")
+	}
+
+	databaseURL := getDatabaseURL(cfg)
 	db, err := database.InitDB(databaseURL)
 	if err != nil {
-		log.Fatalf("⛔ Failed to initialize database: %v", err)
+		log.Fatal().Err(err).Msg("Failed to initialize database")
 	}
-	log.Println("✅ DATABASE CONNECTED")
+	log.Info().Msg("DATABASE CONNECTED")
 
-	startServer(db)
+	svc := service.NewRequestService(db)
+	r := handlers.SetupRouter(svc)
+
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: r,
+	}
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-quit
+		log.Info().Msg("Shutting down server...")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Error().Err(err).Msg("Server forced to shutdown")
+		}
+	}()
+
+	log.Info().Msgf("Starting server on port %s...", cfg.Port)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal().Err(err).Msg("Failed to start server")
+	}
 }
 
-func getDatabaseURL() string {
-	if envURL := os.Getenv("DATABASE_URL"); envURL != "" {
-		return envURL
+func getDatabaseURL(cfg Config) string {
+	if cfg.DatabaseURL != "" {
+		return cfg.DatabaseURL
 	}
-	if filePath := os.Getenv("DATABASE_URL_FILE"); filePath != "" {
-		content, err := os.ReadFile(filePath)
+	if cfg.DatabaseURLFile != "" {
+		content, err := os.ReadFile(cfg.DatabaseURLFile)
 		if err != nil {
-			log.Fatalf("❌ Failed to read DATABASE_URL_FILE: %v", err)
+			log.Fatal().Err(err).Msg("Failed to read DATABASE_URL_FILE")
 		}
 		return string(content)
 	}
-	log.Fatal("❌ DATABASE_URL or DATABASE_URL_FILE must be set")
+	log.Fatal().Msg("DATABASE_URL or DATABASE_URL_FILE must be set")
 	return ""
-}
-
-func startServer(db *database.Database) {
-	r := gin.Default()
-
-	r.GET("/", func(c *gin.Context) {
-		ctx := c.Request.Context()
-
-		if err := db.InsertView(ctx); err != nil {
-			log.Printf("❌ InsertView failed: %v", err)
-			c.JSON(500, gin.H{"error": "Insert failed"})
-			return
-		}
-
-		tm, reqCount, err := db.GetTimeAndRequestCount(ctx)
-		if err != nil {
-			log.Printf("❌ GetTimeAndRequestCount failed: %v", err)
-			c.JSON(500, gin.H{"error": "Query failed"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"api":          "go",
-			"currentTime":  tm,
-			"requestCount": reqCount,
-		})
-	})
-
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, "pong")
-	})
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8000"
-	}
-	log.Printf("🚀 Starting server on port %s...", port)
-	if err := r.Run(":" + port); err != nil {
-		log.Fatalf("❌ Failed to start server: %v", err)
-	}
 }

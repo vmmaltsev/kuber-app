@@ -1,3 +1,52 @@
+# client-react
+
+Современное React-приложение (Vite + TypeScript + React Query + ThemeContext).
+
+## Архитектура
+- **src/components/** — переиспользуемые компоненты (ErrorBoundary, Loader, ThemeToggle, CurrentTimeBlock)
+- **src/api/** — хуки для работы с API
+- **src/services/** — сервисы для работы с API
+- **src/hooks/** — кастомные хуки (например, useLocalStorage)
+- **src/constants.ts** — константы (endpoints, интервалы)
+- **src/App.tsx** — корневой компонент
+
+## Переменные окружения
+- `VITE_API_BASE_URL` — базовый URL для API (см. .env.example)
+
+## Запуск
+```sh
+npm ci
+npm run dev
+```
+
+## Сборка
+```sh
+npm run build
+```
+
+## Тесты
+(добавьте vitest + @testing-library/react для e2e/интеграционных тестов)
+
+## Best practices
+- ErrorBoundary для отлова ошибок
+- Loader и ErrorMessage для UX
+- useLocalStorage для хранения настроек
+- Вынесены константы и сервисы
+- Docker + nginx + healthcheck
+- .env.example для удобства
+
+## Структура
+```
+src/
+  api/
+  components/
+  hooks/
+  services/
+  constants.ts
+  App.tsx
+  ...
+```
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

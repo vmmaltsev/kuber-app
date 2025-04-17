@@ -1,4 +1,4 @@
-FROM node:slim AS base
+FROM node:slim
 
 ENV NODE_ENV=production
 WORKDIR /usr/src/app
@@ -9,15 +9,14 @@ RUN --mount=type=cache,target=/usr/src/app/.npm \
     npm set cache /usr/src/app/.npm && \
     npm ci --only=production
 
-USER node
+COPY --chown=node:node ./src/ ./src/
 
-COPY --chown=node:node ./healthcheck/ ./healthcheck/
-COPY --chown=node:node ./src/ ./
+USER node
 
 EXPOSE 3000
 
 # Добавляем HEALTHCHECK
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD ["curl", "-f", "http://localhost:3000/ping"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/healthz || exit 1
 
-CMD ["node", "index.js"]
+CMD ["node", "src/index.js"]
