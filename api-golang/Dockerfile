@@ -8,10 +8,7 @@ FROM alpine:3.20
 WORKDIR /app
 COPY --from=builder /app/api-golang .
 COPY healthcheck.sh .
-RUN chmod +x healthcheck.sh
-
-# Добавляем непривилегированного пользователя
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup && chmod +x healthcheck.sh
 USER appuser
 
 EXPOSE 8000
