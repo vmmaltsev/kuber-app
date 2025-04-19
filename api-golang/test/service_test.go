@@ -33,7 +33,7 @@ func TestRegisterView(t *testing.T) {
 	}
 }
 
-func TestRegisterView_Error(t *testing.T) {
+func TestRegisterViewError(t *testing.T) {
 	svc := service.NewRequestService(&mockRepo{insertErr: errors.New("fail")})
 	err := svc.RegisterView(context.Background())
 	if err == nil {
@@ -49,7 +49,7 @@ func TestGetStats(t *testing.T) {
 	}
 }
 
-func TestGetStats_Error(t *testing.T) {
+func TestGetStatsError(t *testing.T) {
 	svc := service.NewRequestService(&mockRepo{statsErr: errors.New("fail")})
 	_, _, err := svc.GetStats(context.Background())
 	if err == nil {

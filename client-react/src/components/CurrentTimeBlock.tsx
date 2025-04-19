@@ -4,7 +4,12 @@ import { useCurrentTime } from '../api/useCurrentTime';
 import Loader from './Loader';
 import ErrorMessage from './ErrorMessage';
 
-export default function CurrentTimeBlock({ api, refreshInterval }: { api: string; refreshInterval: number }) {
+type CurrentTimeBlockProps = Readonly<{
+  api: string;
+  refreshInterval: number;
+}>;
+
+export default function CurrentTimeBlock({ api, refreshInterval }: CurrentTimeBlockProps) {
   const { theme } = useContext(ThemeContext);
   const { data, error, isFetching, isLoading } = useCurrentTime(api, refreshInterval);
 

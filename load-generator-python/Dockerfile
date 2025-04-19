@@ -14,12 +14,10 @@ COPY . .
 
 # 🌡 HEALTHCHECK через shell-скрипт (нужно до смены пользователя!)
 COPY docker-healthcheck.sh /usr/local/bin/docker-healthcheck.sh
-RUN chmod +x /usr/local/bin/docker-healthcheck.sh
-
-# 🔐 Создание непривилегированного пользователя
 RUN addgroup --system appgroup && \
     adduser --system --ingroup appgroup appuser && \
-    chown -R appuser:appgroup /app
+    chown -R appuser:appgroup /app && \
+    chmod +x /usr/local/bin/docker-healthcheck.sh
 
 # 🔐 Переключение на пользователя
 USER appuser

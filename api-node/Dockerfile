@@ -10,6 +10,8 @@ RUN --mount=type=cache,target=/usr/src/app/.npm \
     npm ci --only=production
 
 COPY --chown=node:node ./src/ ./src/
+COPY healthcheck.sh .
+RUN chmod +x healthcheck.sh
 
 USER node
 
@@ -17,6 +19,6 @@ EXPOSE 3000
 
 # Добавляем HEALTHCHECK
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/healthz || exit 1
+  CMD ["./healthcheck.sh"]
 
 CMD ["node", "src/index.js"]
